@@ -2,27 +2,44 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
+	"time"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 //GetMongoDBConnection get connection of mongodb
+/*
+Run the following command first in order to be able to connect to mongodb locally!
+docker run --name mongo-db -p 27017:27017 -d mongo:latest
+*/
 func GetMongoDBConnection() (*mongo.Client, error) {
-	// Run the following command first in order to be able to connect to mongodb locally!
-	// docker run --name mongo-db -p 27017:27017 -d mongo:latest
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
-
+	err:=godotenv.Load(".env")
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 
-	err = client.Ping(context.Background(), readpref.Primary())
+	MongoDb := os.Getenv("MONGODB_URL")
+
+	client, err := mongo.NewClient(options.Client().ApplyURI(MongoDb))
+	if err != nil {
+			log.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	defer cancel()
+	err = client.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
+	fmt.Println("Connected to MongoDB!")
 
 	return client, nil
 }
